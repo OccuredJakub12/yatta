@@ -1,11 +1,24 @@
 import streamlit as st
 import os
-import whisper
 import subprocess
 import uuid
 import openai
 from dotenv import load_dotenv
 import re
+
+
+st.sidebar.title("🔑 OpenAI API Key")
+
+if "user_api_key" not in st.session_state:
+    st.session_state.user_api_key = ""
+
+st.sidebar.text_input("Enter your OpenAI API Key", type="password", key="user_api_key")
+
+if not st.session_state.user_api_key:
+    st.warning("Please enter your OpenAI API key to use the app.")
+    st.stop()
+
+
 
 # Load .env file for API key
 load_dotenv()
@@ -32,6 +45,7 @@ if 'flashcards' not in st.session_state:
 
 def transcribe_audio(audio_path):
     """Transcribe the given audio file using OpenAI's Whisper API."""
+    openai.api_key = st.session_state.user_api_key  # Set the user’s API key here
     with open(audio_path, "rb") as audio_file:
         try:
             result = openai.audio.transcriptions.create(
@@ -65,6 +79,7 @@ def save_transcription(text, save_path):
 
 def translate_text(text, target_language, detected_language):
     """Translate text using GPT-4o-mini."""
+    openai.api_key = st.session_state.user_api_key
     try:
         response = openai.chat.completions.create(
             model="gpt-4o",

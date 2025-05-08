@@ -11,9 +11,6 @@ import re
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Initialize Whisper model once
-model = whisper.load_model("base")
-
 # Directory to save files
 DOWNLOAD_DIR = 'downloads'
 if not os.path.exists(DOWNLOAD_DIR):
@@ -34,10 +31,18 @@ if 'flashcards' not in st.session_state:
     st.session_state.flashcards = []
 
 def transcribe_audio(audio_path):
-    """Transcribe the given audio file using Whisper."""
-    result = model.transcribe(audio_path)
-    st.session_state.detected_language = result['language']
-    return result['text']
+    """Transcribe the given audio file using OpenAI's Whisper API."""
+    with open(audio_path, "rb") as audio_file:
+        try:
+            result = openai.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file
+            )
+            st.session_state.detected_language = "Unknown"  # API response doesn't return language reliably
+            return result.text
+        except openai.OpenAIError as e:
+            st.error(f"Transcription failed: {e}")
+            return ""
 
 def convert_audio_to_wav(input_file):
     """Convert audio file to WAV using ffmpeg subprocess."""

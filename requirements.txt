@@ -1,7 +1,5 @@
-streamlit
 openai
-whisper
-yt-dlp
+streamlit
 pydub
+yt-dlp
 python-dotenv
-ffmpeg-python

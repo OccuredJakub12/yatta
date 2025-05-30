@@ -45,6 +45,10 @@ if 'flashcards' not in st.session_state:
 
 def transcribe_audio(audio_path):
     """Transcribe the given audio file using OpenAI's Whisper API."""
+    max_size = 25 * 1024 * 1024  # 25MB
+    if os.path.getsize(audio_path) > max_size:
+        st.error("Audio file is too large for transcription (max 25MB). Please use a shorter file.")
+        return ""
     openai.api_key = st.session_state.user_api_key  # Set the user’s API key here
     with open(audio_path, "rb") as audio_file:
         try:
@@ -100,6 +104,15 @@ def split_sentences(text):
     return [s.strip() for s in re.split(r'(?<=[。！？\.\!\?])\s*', text) if s.strip()]
 
 
+def trim_audio(input_file, duration_seconds=300):
+    """Trim audio to the first `duration_seconds` seconds using ffmpeg."""
+    output_file = input_file.rsplit('.', 1)[0] + f'_trimmed.wav'
+    subprocess.run(
+        ['ffmpeg', '-y', '-i', input_file, '-t', str(duration_seconds), output_file],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    return output_file
+
 
 
 
@@ -115,13 +128,14 @@ if st.button("Download Audio & Transcribe from YouTube"):
             st.write("Starting download and transcription process...")
             audio_file = download_youtube_audio(url_input)
             wav_file = convert_audio_to_wav(audio_file)
-            transcription = transcribe_audio(wav_file)
+            trimmed_wav = trim_audio(wav_file, duration_seconds=300)  # 5 minutes
+            transcription = transcribe_audio(trimmed_wav)
 
             st.session_state.transcription_text = transcription
-            st.session_state.current_audio_file = wav_file
+            st.session_state.current_audio_file = trimmed_wav
             st.session_state.display_text = "\n".join(split_sentences(transcription))
 
-            st.audio(wav_file, format="audio/wav")
+            st.audio(trimmed_wav, format="audio/wav")
             st.success("Download and transcription complete!")
         except Exception as e:
             st.error(f"Error: {e}")
